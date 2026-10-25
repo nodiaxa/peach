@@ -33,12 +33,16 @@ import type { Choice, PanelSettings, SettingsPanelApi, SettingsPanelHost } from 
 import { refreshPanelData, useSaveSettings } from './settings-data';
 import { SidebarOrder } from './sidebar-order';
 import { SettingsDialogClose } from '../components/settings-dialog-close';
+import { useI18n } from '../i18n-hook';
 
 /* 左栏的分区，顺序即右边各组的顺序。字形按条目自己的名字取：整列取自 Remix，一家画的笔画
    才一样粗。 */
 const SECTIONS = [
-  ['外观与导航', 'ri-palette-line'], ['浏览与播放', 'ri-play-circle-line'],
-  ['JAV 与新作', 'jav'], ['搜索与推荐', 'ri-search-line'], ['内容显示', 'ri-shield-check-line'],
+  { key: 'appearance', icon: 'ri-palette-line' },
+  { key: 'playback', icon: 'ri-play-circle-line' },
+  { key: 'jav', icon: 'jav' },
+  { key: 'search', icon: 'ri-search-line' },
+  { key: 'content', icon: 'ri-shield-check-line' },
 ] as const;
 
 const SORT_OPTIONS: readonly Choice[] = [
@@ -92,7 +96,7 @@ async function checkMachine(current: SettingsPanelHost): Promise<void> {
 function open(section = ''): void {
   const current = host;
   if (!current) return;
-  const requested = SECTIONS.findIndex(([title]) => title === section);
+  const requested = SECTIONS.findIndex((s) => s.key === section);
   if (view.open && !view.closing) {
     if (requested >= 0 && requested !== view.tab) update({ tab: requested });
     return;
@@ -172,6 +176,7 @@ const groupId = (index: number) => `settings-group-${index}`;
 function SettingsNav({ tab, epoch, configurable, openConfiguration, onSelect }: {
   tab: number; epoch: number; configurable: boolean | null; openConfiguration(): void; onSelect(index: number): void;
 }) {
+  const { t } = useI18n();
   const nav = useRef<HTMLDivElement | null>(null);
   const glide = useRef<HTMLSpanElement | null>(null);
   const box = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -225,13 +230,13 @@ function SettingsNav({ tab, epoch, configurable, openConfiguration, onSelect }: 
       onPointerLeave={(event) => { if (event.pointerType !== 'touch') place(buttons.current[shown.current], true) }}>
       <span data-settings-glide="" aria-hidden="true" hidden ref={glide} />
       <p data-settings-nav-caption="" role="presentation">设置</p>
-      {SECTIONS.map(([title, icon], index) => (
-        <button type="button" role="tab" key={title} id={tabId(index)} aria-controls={groupId(index)}
+      {SECTIONS.map(({ key: sectionKey, icon }, index) => (
+        <button type="button" role="tab" key={sectionKey} id={tabId(index)} aria-controls={groupId(index)}
           aria-selected={index === tab} tabIndex={index === tab ? 0 : -1}
           ref={(node) => { buttons.current[index] = node }}
           onClick={() => onSelect(index)} onKeyDown={(event) => keys(event, index)}
           onPointerEnter={(event) => { if (event.pointerType !== 'touch') place(event.currentTarget, true) }}>
-          {icon === 'jav' ? <Icon name={icon} /> : <RemixIcon name={icon} />}{title}
+          {icon === 'jav' ? <Icon name={icon} /> : <RemixIcon name={icon} />}{t(`preference.${sectionKey}`, sectionKey)}
         </button>
       ))}
       <div data-settings-service="" role="presentation">
@@ -247,7 +252,7 @@ function SettingsNav({ tab, epoch, configurable, openConfiguration, onSelect }: 
 function Group({ index, tab, children }: { index: number; tab: number; children: ReactNode }) {
   return (
     <section data-setting-group="" id={groupId(index)} role="tabpanel" aria-labelledby={tabId(index)} hidden={index !== tab}>
-      <h3>{SECTIONS[index][0]}</h3>
+      <h3>{SECTIONS[index].key}</h3>
       {children}
     </section>
   );
@@ -279,6 +284,7 @@ function Row({ title, description, kind, children }: {
 }
 
 function SettingsPanel({ host: current, view: shown }: { host: SettingsPanelHost; view: View }) {
+  const { t } = useI18n();
   /* 订阅只为重画：读的是活对象 `store.value`，版本号本身不用。 */
   useSyncExternalStore(current.store.subscribe, current.store.version);
   const settings = current.store.value;
@@ -322,7 +328,7 @@ function SettingsPanel({ host: current, view: shown }: { host: SettingsPanelHost
   useLayoutEffect(() => { resync.current?.() });
 
   const epoch = shown.epoch;
-  const select = (index: number) => { if (index !== view.tab) { update({ tab: index }); current.selectSection?.(SECTIONS[index][0]) } };
+  const select = (index: number) => { if (index !== view.tab) { update({ tab: index }); current.selectSection?.(SECTIONS[index].key) } };
   const save = () => current.store.save();
 
   return (
@@ -331,7 +337,7 @@ function SettingsPanel({ host: current, view: shown }: { host: SettingsPanelHost
       onClick={(event) => { if (event.target === event.currentTarget) close() }}>
       <div data-settings-card="" ref={card}>
         <div data-settings-head="" ref={head}>
-          <h2 id="settingsTitle">{SECTIONS[shown.tab][0]}</h2>
+          <h2 id="settingsTitle">{t(`preference.${SECTIONS[shown.tab].key}`, SECTIONS[shown.tab].key)}</h2>
             <SettingsDialogClose id="settingsClose" label="关闭设置" onPress={() => close()} />
         </div>
         <SettingsNav tab={shown.tab} epoch={epoch} configurable={shown.configurable} onSelect={select}

@@ -175,9 +175,9 @@ describe('设置面板与壳的接缝', () => {
     const current = await setup();
     const openConfiguration = vi.fn();
     current.host.openConfiguration = openConfiguration;
-    const panel = await open(current, 'JAV 与新作');
+    const panel = await open(current, 'jav');
     expect([...panel.querySelectorAll('[role="tab"]')].map((tab) => tab.textContent))
-      .toEqual(['外观与导航', '浏览与播放', 'JAV 与新作', '搜索与推荐', '内容显示']);
+      .toEqual(['appearance', 'playback', 'jav', 'search', 'content']);
     expect(panel.querySelector('#javImageSetting')?.closest('section')?.hidden).toBe(false);
     expect(panel.querySelector('#detailAutoplaySetting')?.closest('section')?.hidden).toBe(true);
     expect(panel.querySelector('#videoThumbnailSetting')).toBeNull();
@@ -305,10 +305,10 @@ describe('常驻组件', () => {
     trigger.focus();
     /* 不包 act：act 会把 flushSync 推到它结束时，看不出句柄自己同步没有。 */
     (globalThis as ActFlag).IS_REACT_ACT_ENVIRONMENT = false;
-    current.api.open('浏览与播放');
+    current.api.open('playback');
     const panel = document.querySelector<HTMLElement>('#settingsPanel')!;
     expect([panel.hidden, panel.querySelector('#settingsTitle')?.textContent, current.api.isOpen()])
-      .toEqual([false, '浏览与播放', true]);
+      .toEqual([false, 'playback', true]);
     expect([document.documentElement.style.overflow, document.body.classList.contains('settings-open')])
       .toEqual(['hidden', true]);
     expect(document.activeElement).toBe(trigger);

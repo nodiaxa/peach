@@ -12,6 +12,7 @@ import { peachHistory, shellNavigate, settingsPath } from '@peach/history';
 import { errorMessage } from '../../api';
 import type { ConfigurationData, ConfigurationPanel, ConfigurationProps } from '../bundle';
 import { Note } from '../components/note';
+import { useI18n } from '../i18n-hook';
 import { CONFIGURATION_KEY, fetchConfiguration } from './configuration';
 import { DownloadGroup } from './download-settings';
 import { GeneralSettings } from './general-settings';
@@ -39,7 +40,7 @@ export function ConfigurationPage({ receipt, reopenTutorial, section = '', diagn
   return <ConfigurationGroups data={data} receipt={receipt} reopenTutorial={reopenTutorial} section={section} diagnostics={diagnostics} />;
 }
 
-interface Group { title: string; body(panel: ConfigurationPanel): ReactElement }
+interface Group { key: string; title: string; body(panel: ConfigurationPanel): ReactElement }
 
 /* 页签与面板的 id 前缀按页签条计数：每画出一条新的页签条领一个号。 */
 let tabSequence = 0;
@@ -49,6 +50,7 @@ let tabSequence = 0;
 function ConfigurationGroups(
   { data, receipt, reopenTutorial, section, diagnostics }: Required<ConfigurationProps> & { data: ConfigurationData; diagnostics?: ReactElement },
 ) {
+  const { t } = useI18n();
   const [prefix] = useState(() => `board-tabs-${++tabSequence}`);
   const [chosen, setChosen] = useState(section);
   const workspace = useRef<HTMLDivElement>(null);
@@ -65,9 +67,9 @@ function ConfigurationGroups(
     const top = matchMedia('(max-width:900px)').matches ? nav.getBoundingClientRect().bottom + 8 : boundary;
     window.scrollTo(0, Math.max(0, window.scrollY + panel.getBoundingClientRect().top - top));
   }, [chosen]);
-  const choose = (title: string) => {
+  const choose = (key: string, title: string) => {
     setChosen(title);
-    shellNavigate(settingsPath(title), { replace: true, state: peachHistory.navigation.location.state });
+    shellNavigate(settingsPath(key), { replace: true, state: peachHistory.navigation.location.state });
   };
   const [narrow, setNarrow] = useState(() => matchMedia('(max-width:900px)').matches);
   useEffect(() => {
@@ -81,23 +83,23 @@ function ConfigurationGroups(
   const network = Boolean(data.peach_proxy || data.access || data.tunnel || (data.editable && data.port_editable !== false));
   const downloads = data.downloads;
   const groups: Group[] = [
-    { title: '媒体库与入库', body: (panel) => <div {...groupRoot(panel)}>
+    { key: 'library', title: t('configuration.library', '媒体库与入库'), body: (panel) => <div {...groupRoot(panel)}>
       <MediaSettings {...group} /><MediaProcessingSettings receipt={receipt} />
     </div> },
-    { title: '来源与订阅', body: (panel) => <SourceSettings {...group} panel={panel} /> },
+    { key: 'subscriptions', title: t('configuration.subscriptions', '来源与订阅'), body: (panel) => <SourceSettings {...group} panel={panel} /> },
     ...(downloads ? [{
-      title: '下载渠道',
+      key: 'downloads', title: t('configuration.downloads', '下载渠道'),
       body: (panel: ConfigurationPanel) => <DownloadGroup initial={downloads} receipt={receipt} panel={panel} />,
     }] : []),
-    ...(network ? [{ title: '网络与访问', body: (panel: ConfigurationPanel) => <NetworkSettings {...group} panel={panel} /> }] : []),
+    ...(network ? [{ key: 'network', title: t('configuration.network', '网络与访问'), body: (panel: ConfigurationPanel) => <NetworkSettings {...group} panel={panel} /> }] : []),
     {
-      title: '应用与维护',
+      key: 'maintenance', title: t('configuration.maintenance', '应用与维护'),
       body: (panel) => <div {...groupRoot(panel)}>
         <GeneralSettings {...group} />
         <MaintenanceSettings {...group} reopenTutorial={reopenTutorial} />
       </div>,
     },
-    { title: '系统诊断', body: panel => <div {...groupRoot(panel)}>{panel.active ? diagnostics : null}</div> },
+    { key: 'diagnostics', title: t('configuration.diagnostics', '系统诊断'), body: panel => <div {...groupRoot(panel)}>{panel.active ? diagnostics : null}</div> },
   ];
   const at = Math.max(0, groups.findIndex((item) => item.title === chosen));
   const move = (event: KeyboardEvent<HTMLButtonElement>, from: number) => {
@@ -109,7 +111,7 @@ function ConfigurationGroups(
     else if (event.key === 'End') next = last;
     else return;
     event.preventDefault();
-    choose(groups[next].title);
+    choose(groups[next].key, groups[next].title);
     buttons.current[next]?.focus();
   };
   return (
@@ -119,7 +121,7 @@ function ConfigurationGroups(
         {groups.map(({ title }, i) => (
           <button key={title} ref={(node) => { buttons.current[i] = node }} type="button" role="tab"
             id={`${prefix}-tab-${i}`} aria-controls={`${prefix}-panel-${i}-0`} aria-selected={i === at}
-            tabIndex={i === at ? 0 : -1} onClick={() => choose(title)} onKeyDown={(event) => move(event, i)}>
+            tabIndex={i === at ? 0 : -1} onClick={() => choose(groups[i].key, groups[i].title)} onKeyDown={(event) => move(event, i)}>
             {title}
           </button>
         ))}

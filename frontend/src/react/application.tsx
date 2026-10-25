@@ -13,6 +13,9 @@ import { releaseAllManagedRoutes } from '../history';
 import { RouterRoot, ROUTER_ROOT_OPTIONS } from './router/router';
 import type { ShellActions } from './router/shell-actions';
 import { ResultUpdates } from './result-updates';
+import { initLanguage } from '../i18n';
+import '../i18n/zh-CN';
+import '../i18n/ja-JP';
 
 interface ApplicationResources { effects: ApplicationEffects; owners: number }
 let resources: ApplicationResources | null = null;
@@ -42,6 +45,7 @@ function acquireResources(): ApplicationResources {
 export function Application() {
   const [actions, setActions] = useState<ShellActions | null>(null);
   useLayoutEffect(() => {
+    initLanguage();
     const first = resources === null;
     const current = acquireResources();
     const disconnect = connectApplication(setActions);
